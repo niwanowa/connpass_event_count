@@ -2,24 +2,25 @@
 connpass_api.py
 """
 
+from http import HTTPStatus
+
 import requests
-from typing import Any, Optional
 
 
-def fetch_events(
+def fetch_events(  # noqa: PLR0913
     hostname: str = "https://connpass.com",
-    event_id: Optional[str] = None,
-    keyword: Optional[str] = None,
-    keyword_or: Optional[str] = None,
-    ym: Optional[int] = None,
-    ymd: Optional[int] = None,
-    nickname: Optional[str] = None,
-    owner_nickname: Optional[str] = None,
-    series_id: Optional[int] = None,
-    start: Optional[int] = None,
-    order: Optional[int] = None,
-    count: Optional[int] = None,
-    format: Optional[str] = None,
+    event_id: str | None = None,
+    keyword: str | None = None,
+    keyword_or: str | None = None,
+    ym: int | None = None,
+    ymd: int | None = None,
+    nickname: str | None = None,
+    owner_nickname: str | None = None,
+    series_id: int | None = None,
+    start: int | None = None,
+    order: int | None = None,
+    count: int | None = None,
+    response_format: str | None = None,
 ) -> dict | None:
     """
     ConnpassのイベントサーチAPIを使用して指定されたホスト名からイベントを取得します。
@@ -31,7 +32,7 @@ def fetch_events(
         hostname (str): Connpass APIのホスト名。
 
     戻り値:
-        list: リクエストが成功した場合（ステータスコード200）、イベントのリストを返します。
+        list: リクエストが成功した場合(ステータスコード200)、イベントのリストを返します。
                 参考(イベントサーチAPI) : https://connpass.com/about/api/
         None: リクエストが失敗した場合。
 
@@ -44,7 +45,7 @@ def fetch_events(
     if event_id is not None:
         url = url + event_id + "/"
 
-    params: dict[str, Optional[str | int]] = {
+    params: dict[str, str | int | None] = {
         "event_id": event_id,
         "keyword": keyword,
         "keyword_or": keyword_or,
@@ -56,19 +57,18 @@ def fetch_events(
         "start": start,
         "order": order,
         "count": count,
-        "format": format,
+        "format": response_format,
     }
     # Remove keys with None values
     params = {k: v for k, v in params.items() if v is not None}
 
     # User-Agentがpython/requestsになっていると403エラーが発生するため、curlに変更
     headers: dict[str, str] = {"User-Agent": "curl/7.81.0"}
-    response: requests.Response = requests.get(url, params=params, headers=headers)
+    response: requests.Response = requests.get(url, params=params, headers=headers, timeout=10)
 
-    if response.status_code == 200:
+    if response.status_code == HTTPStatus.OK:
         events: dict[str, str] = response.json()
         return events
-    else:
-        raise requests.exceptions.RequestException(
-            f"Error: Received status code {response.status_code}\nResponse content: {response.text}"
-        )
+
+    error_message = f"Error: Received status code {response.status_code}\nResponse content: {response.text}"
+    raise requests.exceptions.RequestException(error_message)
