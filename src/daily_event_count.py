@@ -1,17 +1,19 @@
 """
 daily_event_count.py
 GHAでcronを回す際の指標を取得するため、connpassで1日に何件イベントが作成されているかを取得する
-csvとして出力したらそれっぽく見れたりするかもしれない？
+csvとして出力したらそれっぽく見れたりするかもしれない
 """
 
+import csv
 import os
-from typing import Optional
+from datetime import datetime, timedelta
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
 from dotenv import load_dotenv
 
 import connpass_api
-from datetime import datetime, timedelta
-import csv
-from zoneinfo import ZoneInfo
+
 
 def output_csv(event_count: int, hour: str) -> None:
     """
@@ -31,36 +33,37 @@ def output_csv(event_count: int, hour: str) -> None:
                  問題がある場合に発生します。
     """
     # CSVファイルに追記
-    output_dir: str = "outputs/event_count"
-    csv_file_path: str = os.path.join(output_dir, "event_count.csv")
+    csv_file_path: Path = Path("outputs/event_count") / "event_count.csv"
+    file_exists: bool = Path.is_file(csv_file_path)
 
-    file_exists: bool = os.path.isfile(csv_file_path)
-
-    with open(csv_file_path, mode="a", newline="") as csv_file:
+    with Path.open(csv_file_path, mode="a", newline="") as csv_file:
         csv_writer = csv.writer(csv_file)
         if not file_exists:
             csv_writer.writerow(["datetime", "event_count"])
-        csv_writer.writerow([hour,event_count])
+        csv_writer.writerow([hour, event_count])
+
 
 if __name__ == "__main__":
     load_dotenv()
 
     # 環境変数から値を取得
-    CONNPASS_HOST: Optional[str] = os.getenv("URL")
+    CONNPASS_HOST: str | None = os.getenv("URL")
 
     if CONNPASS_HOST is None:
-        raise ValueError("URL is not set")
+        error_message = "URL is not set"
+        raise ValueError(error_message)
 
     # connpass api呼び出し
-    res: Optional[dict] = connpass_api.fetch_events(CONNPASS_HOST, order=1, count=100)
+    res: dict | None = connpass_api.fetch_events(CONNPASS_HOST, order=1, count=100)
 
     if res is None:
-        raise ValueError("Failed to fetch events from connpass API")
+        error_message = "Failed to fetch events from connpass API"
+        raise ValueError(error_message)
 
     # json形式のレスポンスからevents.eventsを取得
     events: list[dict[str, str]] = res["events"]
 
-    summary: dict = dict()
+    summary: dict = {}
 
     for event in events:
         updated: datetime = datetime.strptime(event["updated_at"], "%Y-%m-%dT%H:%M:%S%z")
