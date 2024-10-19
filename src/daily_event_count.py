@@ -63,7 +63,7 @@ if __name__ == "__main__":
     # json形式のレスポンスからevents.eventsを取得
     events: list[dict[str, str]] = res["events"]
 
-    summary: dict = dict()
+    summary: dict = {}
 
     for event in events:
         updated: datetime = datetime.strptime(event["updated_at"], "%Y-%m-%dT%H:%M:%S%z")
