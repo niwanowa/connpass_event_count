@@ -22,5 +22,9 @@
     }
   },
   // ruffの設定は下記ファイルから読み込み(指定が無い場合でも自動で探索されるが明示しておく)
-  "ruff.format.args": ["--config=src/pyproject.toml"]
+  "ruff.format.args": [
+    "--config=src/pyproject.toml"
+  ],
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.typeCheckingMode": "basic"
 }
