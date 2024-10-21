@@ -6,9 +6,8 @@ csvとして出力したらそれっぽく見れたりするかもしれない
 
 import csv
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
@@ -32,15 +31,32 @@ def output_csv(event_count: int, hour: str) -> None:
         OSError: 出力ディレクトリの作成やCSVファイルへの書き込みに
                  問題がある場合に発生します。
     """
-    # CSVファイルに追記
+    # CSVファイルに追記または更新
     csv_file_path: Path = Path("outputs/event_count") / "event_count.csv"
-    file_exists: bool = Path.is_file(csv_file_path)
+    file_exists: bool = csv_file_path.is_file()
 
-    with Path.open(csv_file_path, mode="a", newline="") as csv_file:
+    # 読み込み用のリスト
+    rows: list = []
+
+    if file_exists:
+        with csv_file_path.open(mode="r", newline="") as csv_file:
+            csv_reader = csv.reader(csv_file)
+            header = next(csv_reader, None)
+            if header:
+                rows.append(header)
+            for row in csv_reader:
+                if row[0] == hour:
+                    row[1] = str(max(int(row[1]), event_count))
+                rows.append(row)
+
+    if not any(row[0] == hour for row in rows):
+        rows.append([hour, event_count])
+
+    with csv_file_path.open(mode="w", newline="") as csv_file:
         csv_writer = csv.writer(csv_file)
         if not file_exists:
             csv_writer.writerow(["datetime", "event_count"])
-        csv_writer.writerow([hour, event_count])
+        csv_writer.writerows(rows)
 
 
 if __name__ == "__main__":
@@ -77,14 +93,4 @@ if __name__ == "__main__":
     # 日付と時間ごとのイベント数を出力
     for date_hour, count in summary.items():
         print(f"{date_hour} : {count}件")
-
-    # 現在の日時を取得し、1時間前の日時を計算
-    now = datetime.now(ZoneInfo("Asia/Tokyo"))
-    two_hour_ago = now - timedelta(hours=2)
-    two_hour_ago_str = two_hour_ago.strftime("%Y-%m-%d %H:00")
-
-    # 2時間前のイベント件数を取得
-    event_count = summary.get(two_hour_ago_str, 0)
-
-    # CSVファイルに追記
-    output_csv(event_count, two_hour_ago_str)
+        output_csv(count, date_hour)
